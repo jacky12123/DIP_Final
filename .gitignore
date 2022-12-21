@@ -1,6 +1,7 @@
 .DS_Store
 M2Det/weights/*
 yolov7/weights/*
+yolov7/traced_model.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

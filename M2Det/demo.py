@@ -71,13 +71,11 @@ def draw_detection(im, bboxes, scores, cls_inds, fps, thr=0.2):
             continue
         cls_indx = int(cls_inds[i])
         box = [int(_) for _ in box]
-        thick = int((h + w) / 300)
-        cv2.rectangle(imgcv,
-                      (box[0], box[1]), (box[2], box[3]),
-                      colors[cls_indx], thick)
+        # thick = int((h + w) / 300)
+        thick = 1
+        cv2.rectangle(imgcv, (box[0], box[1]), (box[2], box[3]), colors[cls_indx], thick)
         mess = '%s: %.3f' % (labels[cls_indx], scores[i])
-        cv2.putText(imgcv, mess, (box[0], box[1] - 7),
-                    0, 1e-3 * h, colors[cls_indx], thick // 3)
+        cv2.putText(imgcv, mess, (box[0], box[1] - 7), 0, 1e-3 * h, colors[cls_indx], thick // 3)
         if fps >= 0:
             cv2.putText(imgcv, '%.2f' % fps + ' fps', (w - 160, h - 15), 0, 2e-3 * h, (255, 255, 255), thick // 2)
 
