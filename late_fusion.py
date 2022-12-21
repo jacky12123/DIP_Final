@@ -90,6 +90,25 @@ CATEGORIES = [
     "toothbrush",
 ]
 
+def avg_bbox_fusion(match_bbox_vec):
+    avg_bboxs = np.sum(match_bbox_vec,axis=0) / len(match_bbox_vec)
+    return avg_bboxs
+
+def weighted_box_fusion(bbox, score):
+    weight = score / np.sum(score)
+    out_bbox = np.zeros(4)
+    for i in range(len(score)):
+        out_bbox += weight[i] * bbox[i]
+    return out_bbox
+
+def bayesian_fusion(match_score_vec):
+    log_positive_scores = np.log(match_score_vec)
+    log_negative_scores = np.log(1 - match_score_vec)
+    fused_positive = np.exp(np.sum(log_positive_scores))
+    fused_negative = np.exp(np.sum(log_negative_scores))
+    fused_positive_normalized = fused_positive / (fused_positive + fused_negative)
+    return fused_positive_normalized
+
 def plot_one_box(x, img, color=None, label=None, line_thickness=1):
     # Plots one bounding box on image img
     tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
@@ -114,6 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('--method', default='nms', help='method to fuse boxes')
     args = parser.parse_args()
 
+    colors = [[random.randint(0, 255) for _ in range(3)] for _ in CATEGORIES]
     for path in tqdm(sorted(os.listdir(args.det1))):
         # det1
         with open(os.path.join(args.det1, path), 'r') as f:
@@ -159,6 +179,7 @@ if __name__ == '__main__':
                 score3 = np.array(score3)
 
         # prepare data
+        image = cv2.imread(os.path.join(args.img, path.replace('txt', 'png')))
         if args.det3 != None:
             classes = np.concatenate((class1, class2, class3), axis=0)
             boxes = np.concatenate((box1, box2, box3), axis=0)
@@ -168,20 +189,75 @@ if __name__ == '__main__':
             boxes = np.concatenate((box1, box2), axis=0)
             scores = np.concatenate((score1, score2), axis=0)
 
-        classes = torch.Tensor(classes)
-        boxes = torch.Tensor(boxes)
-        scores = torch.Tensor(scores)
-
-        image = cv2.imread(os.path.join(args.img, path.replace('txt', 'png')))
         if args.method == 'nms':
-            keep_id = box_ops.batched_nms(boxes, scores, classes, iou_threshold=0.5)
+            classes = torch.Tensor(classes)
+            boxes = torch.Tensor(boxes)
+            scores = torch.Tensor(scores)
+
+            # keep_id = box_ops.batched_nms(boxes, scores, classes, iou_threshold=0.5)
+            keep_id = box_ops.nms(boxes, scores, iou_threshold=0.5)
             classes = classes[keep_id]
             boxes = boxes[keep_id]
             scores = scores[keep_id]
 
-            colors = [[random.randint(0, 255) for _ in range(3)] for _ in CATEGORIES]
             for i, box in enumerate(boxes):
                 label = f'{CATEGORIES[int(classes[i])]} {scores[i]:.2f}'
                 plot_one_box(box, image, color=colors[int(classes[i])], label=label, line_thickness=1)
+            cv2.imwrite(os.path.join(args.output, 'nms', path.replace('txt', 'png')), image)
 
-            cv2.imwrite(os.path.join(args.output, path.replace('txt', 'png')), image)
+        elif args.method == 'bayesian':
+            x1 = boxes[:, 0]
+            y1 = boxes[:, 1]
+            x2 = boxes[:, 2]
+            y2 = boxes[:, 3]
+            
+            areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+            order = scores.argsort()[::-1]
+
+            keep = []
+            match_scores = []
+            match_bboxs = []
+            while order.size > 0:
+                i = order[0]
+                keep.append(i)
+                
+                xx1 = np.maximum(x1[i], x1[order[1:]])
+                yy1 = np.maximum(y1[i], y1[order[1:]])
+                xx2 = np.minimum(x2[i], x2[order[1:]])
+                yy2 = np.minimum(y2[i], y2[order[1:]])
+
+                w = np.maximum(0.0, xx2 - xx1 + 1)
+                h = np.maximum(0.0, yy2 - yy1 + 1)
+                inter = w * h
+                ovr = inter / (areas[i] + areas[order[1:]] - inter)
+                
+                inds = np.where(ovr <= 0.5)[0]
+                match = np.where(ovr > 0.5)[0]
+                match_ind = order[match + 1]
+                
+                match_score = list(scores[match_ind])
+                match_bbox = list(boxes[match_ind][:, :4])
+                original_score = scores[i].tolist()
+                original_bbox = boxes[i][:4]
+
+                if len(match_score) > 0:
+                    match_score += [original_score]
+                    match_bbox += [original_bbox]
+                    final_score = bayesian_fusion(np.array(match_score))
+                    final_bbox = avg_bbox_fusion(match_bbox)
+                    match_scores.append(final_score)
+                    match_bboxs.append(final_bbox)
+                else:
+                    match_scores.append(original_score)
+                    match_bboxs.append(original_bbox)
+
+                order = order[inds + 1]
+
+            assert len(keep) == len(match_scores)
+            assert len(keep) == len(match_bboxs)
+            match_classes = classes[keep]
+
+            for i, box in enumerate(match_bboxs):
+                label = f'{CATEGORIES[int(match_classes[i])]} {match_scores[i]:.2f}'
+                plot_one_box(box, image, color=colors[int(match_classes[i])], label=label, line_thickness=1)
+            cv2.imwrite(os.path.join(args.output, 'bayesian', path.replace('txt', 'png')), image)
