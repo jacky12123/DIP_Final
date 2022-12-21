@@ -10,7 +10,7 @@ from layers.functions import PriorBox
 from layers.modules import MultiBoxLoss
 from data import mk_anchors
 from data import COCODetection, VOCDetection, detection_collate, preproc
-from configs.CC import Config
+from cfg.CC import Config
 from termcolor import cprint
 from utils.nms_wrapper import nms
 import numpy as np
@@ -164,5 +164,3 @@ def nms_process(num_classes, i, scores, boxes, cfg, min_thresh, all_boxes, max_p
             for j in range(1, num_classes):
                 keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                 all_boxes[j][i] = all_boxes[j][i][keep, :]
-
-

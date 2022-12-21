@@ -1,41 +1,44 @@
 import os
 import cv2
-import numpy as np
 import time
-from torch.multiprocessing import Pool
-from utils.nms_wrapper import nms
-from utils.timer import Timer
-from cfg.CC import Config
 import argparse
-from layers.functions import Detect, PriorBox
+import numpy as np
+from torch.multiprocessing import Pool
+from cfg.CC import Config
 from m2det import build_net
 from data import BaseTransform
+from layers.functions import Detect, PriorBox
 from utils.core import *
+from utils.timer import Timer
+from utils.nms_wrapper import nms
 from utils.pycocotools.coco import COCO
 
-parser = argparse.ArgumentParser(description='M2Det Testing')
-parser.add_argument('-c', '--config', default='cfg/m2det320_vgg.py', type=str)
+# python3 demo.py -c=cfg/m2det512_vgg.py -f=../data -s=output -m=weights/m2det512_vgg.pth
+parser = argparse.ArgumentParser(description='M2Det Testing.')
+parser.add_argument('-c', '--config', default='cfg/m2det320_vgg.py')
 parser.add_argument('-f', '--directory', default='imgs/', help='the path to demo images')
-parser.add_argument('-m', '--trained_model', default=None, type=str, help='Trained state_dict file path to open')
+parser.add_argument('-s', '--save', default='output/', help='the save path to demo images')
+parser.add_argument('-m', '--trained_model', default=None, help='trained state_dict file path to open')
 parser.add_argument('--video', default=False, type=bool, help='videofile mode')
 parser.add_argument('--cam', default=-1, type=int, help='camera device id')
-parser.add_argument('--show', action='store_true', help='Whether to display the images')
+parser.add_argument('--show', action='store_true', help='whether to display the images')
 args = parser.parse_args()
 
-print_info(' ----------------------------------------------------------------------\n'
-           '|                       M2Det Demo Program                             |\n'
-           ' ----------------------------------------------------------------------', ['yellow','bold'])
+print_info(
+    ' ---------------------------------------------------------------------- \n'
+    '|                       M2Det Demo Program                             |\n'
+    ' ---------------------------------------------------------------------- ',
+    ['yellow', 'bold']
+)
 
 global cfg
 cfg = Config.fromfile(args.config)
 anchor_config = anchors(cfg)
 print_info('The Anchor info: \n{}'.format(anchor_config))
 priorbox = PriorBox(anchor_config)
-net = build_net('test',
-                size = cfg.model.input_size,
-                config = cfg.model.m2det_config)
+net = build_net('test', size=cfg.model.input_size, config=cfg.model.m2det_config)
 init_net(net, cfg, args.trained_model)
-print_info('===> Finished constructing and loading model',['yellow','bold'])
+print_info('===> Finished constructing and loading model', ['yellow', 'bold'])
 net.eval()
 with torch.no_grad():
     priors = priorbox.forward()
@@ -98,7 +101,7 @@ if cam >= 0 or video:
     video_name = os.path.splitext(video_path)
     fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
     out_video = cv2.VideoWriter(video_name[0] + '_m2det.mp4', fourcc, capture.get(cv2.CAP_PROP_FPS), (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
-im_fnames = sorted((fname for fname in os.listdir(im_path) if os.path.splitext(fname)[-1] == '.jpg'))
+im_fnames = sorted((fname for fname in os.listdir(im_path) if os.path.splitext(fname)[-1] == '.png'))
 im_fnames = (os.path.join(im_path, fname) for fname in im_fnames)
 im_iter = iter(im_fnames)
 while True:
@@ -120,7 +123,7 @@ while True:
     img = _preprocess(image).unsqueeze(0)
     if cfg.test_cfg.cuda:
         img = img.cuda()
-    scale = torch.Tensor([w,h,w,h])
+    scale = torch.Tensor([w, h, w, h])
     out = net(img)
     boxes, scores = detector.forward(out, priors)
     boxes = (boxes[0]*scale).cpu().numpy()
@@ -134,25 +137,24 @@ while True:
         c_scores = scores[inds, j]
         c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(np.float32, copy=False)
         soft_nms = cfg.test_cfg.soft_nms
-        keep = nms(c_dets, cfg.test_cfg.iou, force_cpu = soft_nms) #min_thresh, device_id=0 if cfg.test_cfg.cuda else None)
+        keep = nms(c_dets, cfg.test_cfg.iou, force_cpu=soft_nms) # min_thresh, device_id=0 if cfg.test_cfg.cuda else None)
         keep = keep[:cfg.test_cfg.keep_per_class]
         c_dets = c_dets[keep, :]
-        allboxes.extend([_.tolist()+[j] for _ in c_dets])
+        allboxes.extend([_.tolist() + [j] for _ in c_dets])
 
     loop_time = time.time() - loop_start
     allboxes = np.array(allboxes)
-    boxes = allboxes[:,:4]
-    scores = allboxes[:,4]
-    cls_inds = allboxes[:,5]
-    print('\n'.join(['pos:{}, ids:{}, score:{:.3f}'.format('(%.1f,%.1f,%.1f,%.1f)' % (o[0],o[1],o[2],o[3]) \
-            ,labels[int(oo)],ooo) for o,oo,ooo in zip(boxes,cls_inds,scores)]))
+    boxes = allboxes[:, :4]
+    scores = allboxes[:, 4]
+    cls_inds = allboxes[:, 5]
+    print('\n'.join(['pos:{}, ids:{}, score:{:.3f}'.format('(%.1f,%.1f,%.1f,%.1f)' % (o[0], o[1], o[2], o[3]) \
+        ,labels[int(oo)], ooo) for o, oo, ooo in zip(boxes, cls_inds, scores)]))
     fps = 1.0 / float(loop_time) if cam >= 0 or video else -1
     im2show = draw_detection(image, boxes, scores, cls_inds, fps)
     # print bbox_pred.shape, iou_pred.shape, prob_pred.shape
 
     if im2show.shape[0] > 1100:
-        im2show = cv2.resize(im2show,
-                             (int(1000. * float(im2show.shape[1]) / im2show.shape[0]), 1000))
+        im2show = cv2.resize(im2show, (int(1000. * float(im2show.shape[1]) / im2show.shape[0]), 1000))
     if args.show:
         cv2.imshow('test', im2show)
         if cam < 0 and not video:
@@ -164,6 +166,7 @@ while True:
                 capture.release()
                 break
     if cam < 0 and not video:
-        cv2.imwrite('{}_m2det.jpg'.format(fname.split('.')[0]), im2show)
+        path = os.path.join(args.save, fname.split('/')[-1].split('.')[0])
+        cv2.imwrite('{}_m2det.png'.format(path), im2show)
     else:
         out_video.write(im2show)
