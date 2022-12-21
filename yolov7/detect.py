@@ -119,7 +119,8 @@ def detect(source, save_img=False):
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
+                        # line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
+                        line = (cls, *xyxy, conf) if opt.save_conf else (cls, *xyxy)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -162,7 +163,7 @@ def detect(source, save_img=False):
     print(f'Done. ({time.time() - t0:.3f}s)')
 
 if __name__ == '__main__':
-    # python3 detect.py --weights weights/yolov7.pt --conf-thres 0.25 --img-size 640 --device cpu --name dip --exist-ok --source ../data
+    # python3 detect.py --weights weights/yolov7.pt --conf-thres 0.25 --img-size 640 --device cpu --name dip --exist-ok --save-txt --save-conf --source ../data
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
@@ -194,3 +195,4 @@ if __name__ == '__main__':
         else:
             for source in tqdm(sorted(glob.glob(os.path.join(opt.source, '*')))):
                 detect(source)
+
