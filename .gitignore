@@ -2,6 +2,7 @@
 M2Det/weights/*
 yolov7/weights/*
 yolov7/traced_model.pt
+FCOS/weights/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

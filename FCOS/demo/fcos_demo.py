@@ -1,14 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import argparse
-import cv2, os
-
-from fcos_core.config import cfg
-from predictor import COCODemo
-
+import os
+import cv2
 import time
-
+import argparse
+from predictor import COCODemo
+from fcos_core.config import cfg
 
 def main():
+    # python3 demo/fcos_demo.py --config-file configs/fcos/fcos_imprv_R_50_FPN_1x.yaml --weights weights/FCOS_imprv_R_50_FPN_1x.pth --images-dir ../data --output dip
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Webcam Demo")
     parser.add_argument(
         "--config-file",
@@ -27,6 +26,12 @@ def main():
         default="demo/images",
         metavar="DIR",
         help="path to demo images directory",
+    )
+    parser.add_argument(
+        "--output",
+        default="dip",
+        metavar="DIR",
+        help="path to output images directory",
     )
     parser.add_argument(
         "--min-image-size",
@@ -100,11 +105,11 @@ def main():
         start_time = time.time()
         composite = coco_demo.run_on_opencv_image(img)
         print("{}\tinference time: {:.2f}s".format(im_name, time.time() - start_time))
-        cv2.imshow(im_name, composite)
-    print("Press any keys to exit ...")
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+        cv2.imwrite(os.path.join(args.output, im_name), composite)
+        # cv2.imshow(im_name, composite)
+    # print("Press any keys to exit ...")
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
-
