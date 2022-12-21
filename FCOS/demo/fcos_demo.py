@@ -3,11 +3,13 @@ import os
 import cv2
 import time
 import argparse
+from pathlib import Path
 from predictor import COCODemo
 from fcos_core.config import cfg
 
 def main():
-    # python3 demo/fcos_demo.py --config-file configs/fcos/fcos_imprv_R_50_FPN_1x.yaml --weights weights/FCOS_imprv_R_50_FPN_1x.pth --images-dir ../data --output dip
+    # CUDA_VISIBLE_DEVICES=0 python3 demo/fcos_demo.py --config-file configs/fcos/fcos_imprv_R_50_FPN_1x.yaml --weights weights/FCOS_imprv_R_50_FPN_1x.pth --images-dir ../data --output dip/FCOS_imprv_R_50_FPN_1x
+    # CUDA_VISIBLE_DEVICES=0 python3 demo/fcos_demo.py --config-file configs/fcos/fcos_imprv_dcnv2_X_101_64x4d_FPN_2x.yaml --weights weights/FCOS_imprv_dcnv2_X_101_64x4d_FPN_2x.pth --images-dir ../data --output dip/FCOS_imprv_dcnv2_X_101_64x4d_FPN_2x
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Webcam Demo")
     parser.add_argument(
         "--config-file",
@@ -98,12 +100,15 @@ def main():
         min_image_size=args.min_image_size
     )
 
+    label_path = Path(os.path.join(args.output, 'labels'))
+    label_path.mkdir(parents=True, exist_ok=True)
+
     for im_name in demo_im_names:
         img = cv2.imread(os.path.join(args.images_dir, im_name))
         if img is None:
             continue
         start_time = time.time()
-        composite = coco_demo.run_on_opencv_image(img)
+        composite = coco_demo.run_on_opencv_image(img, label_path=os.path.join(args.output, 'labels', im_name.replace('png', 'txt')))
         print("{}\tinference time: {:.2f}s".format(im_name, time.time() - start_time))
         cv2.imwrite(os.path.join(args.output, im_name), composite)
         # cv2.imshow(im_name, composite)

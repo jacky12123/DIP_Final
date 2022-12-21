@@ -159,7 +159,7 @@ class COCODemo(object):
         )
         return transform
 
-    def run_on_opencv_image(self, image):
+    def run_on_opencv_image(self, image, label_path):
         """
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
@@ -181,6 +181,7 @@ class COCODemo(object):
         if self.cfg.MODEL.KEYPOINT_ON:
             result = self.overlay_keypoints(result, top_predictions)
         result = self.overlay_class_names(result, top_predictions)
+        self.save_txt(top_predictions, label_path)
 
         return result
 
@@ -370,6 +371,17 @@ class COCODemo(object):
             )
 
         return image
+    
+    def save_txt(self, predictions, label_path):
+        scores = predictions.get_field("scores").tolist()
+        labels = predictions.get_field("labels").tolist()
+        boxes = predictions.bbox
+
+        for i, box in enumerate(boxes):
+            box = box.to(torch.int64)
+            line = (labels[i] - 1, *box, scores[i])
+            with open(label_path, 'a') as f:
+                f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -434,4 +446,3 @@ def vis_keypoints(img, kps, kp_thresh=2, alpha=0.7):
 
     # Blend the keypoints.
     return cv2.addWeighted(img, 1.0 - alpha, kp_mask, alpha, 0)
-
