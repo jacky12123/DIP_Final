@@ -3,6 +3,7 @@ M2Det/weights/*
 yolov7/weights/*
 yolov7/traced_model.pt
 FCOS/weights/*
+BBAVectors-Oriented-Object-Detection/weights_dota/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
