@@ -8,8 +8,8 @@ from models import ctrbox_net
 import decoder
 import os
 
-
 def parse_args():
+    # python3 main.py --data_dir ./imgs --output ./dip --batch_size 1 --dataset dota --phase test
     parser = argparse.ArgumentParser(description='BBAVectors Implementation')
     parser.add_argument('--num_epoch', type=int, default=1, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=1, help='Number of batch size')
@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument('--resume', type=str, default='model_50.pth', help='Weights resumed in testing and evaluation')
     parser.add_argument('--dataset', type=str, default='dota', help='Name of dataset')
     parser.add_argument('--data_dir', type=str, default='../Datasets/dota', help='Data directory')
+    parser.add_argument('--output', type=str, default='./dip', help='Output directory')
     parser.add_argument('--phase', type=str, default='test', help='Phase choice= {train, test, eval}')
     parser.add_argument('--wh_channels', type=int, default=8, help='Number of channels for the vectors (4x2)')
     args = parser.parse_args()

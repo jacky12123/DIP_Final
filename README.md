@@ -32,3 +32,5 @@ sh make.sh
 2. https://github.com/WongKinYiu/yolov7
 3. https://github.com/tianzhi0549/FCOS
 4. https://github.com/cocodataset/cocoapi
+5. https://github.com/yijingru/BBAVectors-Oriented-Object-Detection
+6. https://github.com/Jamie725/Multimodal-Object-Detection-via-Probabilistic-Ensembling

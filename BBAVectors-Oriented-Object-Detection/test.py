@@ -182,12 +182,12 @@ class TestModule(object):
                     box = np.int0(box)
                     cv2.drawContours(ori_image, [box], 0, (255, 255, 255), 1)
 
-            cv2.imshow('pr_image', ori_image)
-            k = cv2.waitKey(0) & 0xFF
-            if k == ord('q'):
-                cv2.destroyAllWindows()
-                exit()
-            #"""
+            cv2.imwrite(os.path.join(args.output, f'{cnt:05d}.png'), ori_image)
+            # cv2.imshow('pr_image', ori_image)
+            # k = cv2.waitKey(0) & 0xFF
+            # if k == ord('q'):
+            #     cv2.destroyAllWindows()
+            #     exit()
 
         total_time = total_time[1:]
         print('avg time is {}'.format(np.mean(total_time)))
