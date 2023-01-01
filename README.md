@@ -26,6 +26,12 @@ cd M2Det
 sh make.sh
 ```
 
+### How to run
+
+```
+python3 late_fusion.py --img data --det1 yolov7/runs/detect/dip/labels --det2 FCOS/dip/FCOS_imprv_dcnv2_X_101_64x4d_FPN_2x/labels --det3 FCOS/dip/FCOS_imprv_R_50_FPN_1x/labels --output results --method bayesian
+```
+
 ### Acknowledgments
 
 1. https://github.com/VDIGPKU/M2Det
